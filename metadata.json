@@ -1,0 +1,5 @@
+{
+  "name": "1DM Video Downloader API",
+  "description": "A powerful video downloader API and UI inspired by 1DM, powered by yt-dlp. Supports multiple formats and sites.",
+  "requestFramePermissions": []
+}
