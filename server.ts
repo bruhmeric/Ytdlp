@@ -13,6 +13,16 @@ const execPromise = promisify(exec);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Helper to get the yt-dlp command
+async function getYtDlpCommand() {
+  try {
+    await execPromise("yt-dlp --version");
+    return "yt-dlp";
+  } catch {
+    return "npx -y @shoginn/yt-dlp-node";
+  }
+}
+
 const DOWNLOADS_DIR = path.join(__dirname, "downloads");
 if (!fs.existsSync(DOWNLOADS_DIR)) {
   fs.mkdirSync(DOWNLOADS_DIR);
@@ -38,6 +48,7 @@ async function startServer() {
         
         if (data.type === "start_download") {
           const { url, formatId, cookies, downloadId } = data;
+          const ytDlpCmd = await getYtDlpCommand();
           
           let commandArgs = ["-f", formatId, "--newline", "--progress", "-o", path.join(DOWNLOADS_DIR, "%(title)s.%(ext)s"), url];
           
@@ -45,8 +56,13 @@ async function startServer() {
             commandArgs.push("--cookies-content", cookies);
           }
 
-          // Use npx to run yt-dlp-node
-          const child = spawn("npx", ["-y", "@shoginn/yt-dlp-node", ...commandArgs]);
+          // Use the determined command
+          let child;
+          if (ytDlpCmd === "yt-dlp") {
+            child = spawn("yt-dlp", commandArgs);
+          } else {
+            child = spawn("npx", ["-y", "@shoginn/yt-dlp-node", ...commandArgs]);
+          }
 
           child.stdout.on("data", (chunk) => {
             const line = chunk.toString();
@@ -100,7 +116,8 @@ async function startServer() {
     }
     
     try {
-      let command = `npx -y @shoginn/yt-dlp-node -j "${url}"`;
+      const ytDlpCmd = await getYtDlpCommand();
+      let command = `${ytDlpCmd} -j "${url}"`;
       
       // Add cookies if provided
       if (cookies) {
